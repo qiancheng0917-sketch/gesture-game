@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手势识别特效游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 12px 24px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            color: #aaa;
+            white-space: nowrap;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 4px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            background: #333;
+            color: #aaa;
+        }
+
+        .btn.active {
+            background: #6c63ff;
+            color: #fff;
+        }
+
+        .btn:hover {
+            background: #555;
+        }
+
+        .btn.active:hover {
+            background: #7c73ff;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #videoElement {
+            display: none;
+        }
+
+        #outputCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 8px;
+        }
+
+        .status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #aaa;
+            backdrop-filter: blur(10px);
+        }
+
+        .status .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            background: #f44;
+            animation: pulse 1.5s infinite;
+        }
+
+        .status .dot.connected {
+            background: #4f4;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #333;
+            border-top-color: #6c63ff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hint {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(108, 99, 255, 0.2);
+            border: 1px solid rgba(108, 99, 255, 0.4);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #c8c4ff;
+            z-index: 99;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner"></div>
+            <p>正在加载手势识别模型...</p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>模式:</label>
+                <div class="btn-group">
+                    <button class="btn active" id="btnSingle" onclick="setMode('single')">单手</button>
+                    <button class="btn" id="btnDual" onclick="setMode('dual')">双手</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>效果:</label>
+                <div class="btn-group">
+                    <button class="btn active" id="btnMosaic" onclick="setEffect('mosaic')">马赛克</button>
+                    <button class="btn" id="btnThermal" onclick="setEffect('colorful')">炫彩</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <label>块大小:</label>
+                <input type="range" id="mosaicSize" min="5" max="30" value="12"
+                    style="width: 80px; accent-color: #6c63ff;">
+            </div>
+        </div>
+
+        <div class="hint" id="hintText">
+            单手模式：用拇指和食指形成圆形区域 | 双手模式：用双手拇指和食指形成四边形区域
+        </div>
+
+        <div class="canvas-container">
+            <video id="videoElement" autoplay playsinline></video>
+            <canvas id="outputCanvas"></canvas>
+        </div>
+
+        <div class="status">
+            <span class="dot" id="statusDot"></span>
+            <span id="statusText">等待连接摄像头...</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
+    <script>
+        // ============ State ============
+        let currentMode = 'single';
+        let currentEffect = 'mosaic';
+        let mosaicBlockSize = 12;
+        let isReady = false;
+        let hueShift = 0; // animated hue rotation for colorful mode
+
+        // ============ Hand Skeleton Connections ============
+        // MediaPipe 21 landmarks: wrist=0, thumb=1-4, index=5-8, middle=9-12, ring=13-16, pinky=17-20
+        const HAND_CONNECTIONS = [
+            [0,1],[1,2],[2,3],[3,4],       // thumb
+            [0,5],[5,6],[6,7],[7,8],       // index
+            [0,9],[9,10],[10,11],[11,12],  // middle (via 9)
+            [0,13],[13,14],[14,15],[15,16],// ring (via 13)
+            [0,17],[17,18],[18,19],[19,20],// pinky
+            [5,9],[9,13],[13,17]           // palm cross-connections
+        ];
+
+        // Bone colors per finger group
+        const BONE_COLORS = {
+            thumb:  '#ff6b6b',
+            index:  '#ffd93d',
+            middle: '#6bcb77',
+            ring:   '#4d96ff',
+            pinky:  '#9b59b6',
+            palm:   '#e0e0e0'
+        };
+
+        function getBoneColor(i, j) {
+            const min = Math.min(i, j);
+            const max = Math.max(i, j);
+            if (max <= 4) return BONE_COLORS.thumb;
+            if (min >= 5 && max <= 8) return BONE_COLORS.index;
+            if (min >= 9 && max <= 12) return BONE_COLORS.middle;
+            if (min >= 13 && max <= 16) return BONE_COLORS.ring;
+            if (min >= 17 && max <= 20) return BONE_COLORS.pinky;
+            if (min === 0) {
+                if (max <= 4) return BONE_COLORS.thumb;
+                if (max <= 8) return BONE_COLORS.index;
+                if (max <= 12) return BONE_COLORS.middle;
+                if (max <= 16) return BONE_COLORS.ring;
+                return BONE_COLORS.pinky;
+            }
+            return BONE_COLORS.palm;
+        }
+
+        // ============ DOM Elements ============
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('outputCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const mosaicSizeSlider = document.getElementById('mosaicSize');
+
+        // Offscreen canvas for pixel reading
+        const offCanvas = document.createElement('canvas');
+        const offCtx = offCanvas.getContext('2d', { willReadFrequently: true });
+
+        // ============ Controls ============
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btnSingle').classList.toggle('active', mode === 'single');
+            document.getElementById('btnDual').classList.toggle('active', mode === 'dual');
+            document.getElementById('hintText').textContent =
+                mode === 'single'
+                    ? '单手模式：左右手各自的拇指与食指形成圆形区域，同时显示骨架'
+                    : '双手模式：用双手拇指和食指形成四边形区域';
+        }
+
+        function setEffect(effect) {
+            currentEffect = effect;
+            document.getElementById('btnMosaic').classList.toggle('active', effect === 'mosaic');
+            document.getElementById('btnThermal').classList.toggle('active', effect === 'colorful');
+        }
+
+        mosaicSizeSlider.addEventListener('input', (e) => {
+            mosaicBlockSize = parseInt(e.target.value);
+        });
+
+        // ============ MediaPipe Hands ============
+        const hands = new Hands({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/${file}`;
+            }
+        });
+
+        hands.setOptions({
+            maxNumHands: 2,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.5
+        });
+
+        hands.onResults(onResults);
+
+        // ============ Camera Setup ============
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720, facingMode: 'user' }
+                });
+                video.srcObject = stream;
+                await video.play();
+
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                offCanvas.width = video.videoWidth;
+                offCanvas.height = video.videoHeight;
+
+                statusDot.classList.add('connected');
+                statusText.textContent = '摄像头已连接 - 请将手放入画面';
+
+                const camera = new Camera(video, {
+                    onFrame: async () => {
+                        await hands.send({ image: video });
+                    },
+                    width: 1280,
+                    height: 720
+                });
+                camera.start();
+
+            } catch (err) {
+                statusText.textContent = '无法访问摄像头: ' + err.message;
+                console.error('Camera error:', err);
+            }
+        }
+
+        // ============ Results Handler ============
+        function onResults(results) {
+            if (!isReady) {
+                isReady = true;
+                loadingOverlay.classList.add('hidden');
+            }
+
+            // Advance hue for colorful mode animation
+            hueShift = (hueShift + 2) % 360;
+
+            // Draw mirrored camera frame
+            ctx.save();
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+            ctx.restore();
+
+            // Draw to offscreen for pixel data
+            offCtx.save();
+            offCtx.translate(offCanvas.width, 0);
+            offCtx.scale(-1, 1);
+            offCtx.drawImage(results.image, 0, 0, offCanvas.width, offCanvas.height);
+            offCtx.restore();
+
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                return;
+            }
+
+            if (currentMode === 'single') {
+                handleSingleHandMode(results);
+            } else {
+                handleDualHandMode(results);
+            }
+        }
+
+        // ============ Draw Hand Skeleton ============
+        function drawHandSkeleton(landmarks, handLabel) {
+            // handLabel: 'Left' or 'Right' (from MediaPipe, pre-mirror)
+            // After mirroring the display, Left/Right swap visually
+            const isLeft = (handLabel === 'Left');
+            const baseHue = isLeft ? 200 : 0; // blue-ish for left, red-ish for right
+
+            // Convert landmarks to mirrored canvas coords
+            const pts = landmarks.map(lm => ({
+                x: (1 - lm.x) * canvas.width,
+                y: lm.y * canvas.height
+            }));
+
+            // Draw bones
+            for (const [i, j] of HAND_CONNECTIONS) {
+                const color = getBoneColor(i, j);
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[j].x, pts[j].y);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 4;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+
+                // Glow
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[j].x, pts[j].y);
+                ctx.strokeStyle = color + '55';
+                ctx.lineWidth = 8;
+                ctx.stroke();
+            }
+
+            // Draw joints
+            const tipIndices = [4, 8, 12, 16, 20]; // fingertips
+            for (let k = 0; k < pts.length; k++) {
+                const isTip = tipIndices.includes(k);
+                const isWrist = (k === 0);
+                const r = isTip ? 7 : isWrist ? 8 : 5;
+                const fillColor = isTip ? '#fff' : (isWrist ? `hsl(${baseHue},70%,60%)` : '#ddd');
+
+                ctx.beginPath();
+                ctx.arc(pts[k].x, pts[k].y, r, 0, Math.PI * 2);
+                ctx.fillStyle = fillColor;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+            }
+
+            // Label at wrist
+            const label = isLeft ? '右手' : '左手'; // mirror swap
+            ctx.font = 'bold 14px sans-serif';
+            ctx.fillStyle = `hsl(${baseHue},80%,70%)`;
+            ctx.textAlign = 'center';
+            ctx.fillText(label, pts[0].x, pts[0].y + 24);
+        }
+
+        // ============ Single Hand Mode ============
+        function handleSingleHandMode(results) {
+            if (results.multiHandLandmarks.length < 1) return;
+
+            // Process each detected hand independently
+            for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                const hand = results.multiHandLandmarks[h];
+                const handedness = results.multiHandedness[h].label; // 'Left' or 'Right'
+                const thumbTip = hand[4];
+                const indexTip = hand[8];
+
+                const x1 = (1 - thumbTip.x) * canvas.width;
+                const y1 = thumbTip.y * canvas.height;
+                const x2 = (1 - indexTip.x) * canvas.width;
+                const y2 = indexTip.y * canvas.height;
+
+                const centerX = (x1 + x2) / 2;
+                const centerY = (y1 + y2) / 2;
+                const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)) / 2;
+
+                if (radius >= 10) {
+                    applyCircularEffect(centerX, centerY, radius);
+
+                    // Circle outline with hand-specific color
+                    const circleColor = (handedness === 'Left')
+                        ? 'rgba(100, 180, 255, 0.8)' : 'rgba(255, 100, 130, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = circleColor;
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([8, 4]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                // Draw skeleton for this hand
+                drawHandSkeleton(hand, handedness);
+            }
+        }
+
+        // ============ Dual Hand Mode ============
+        function handleDualHandMode(results) {
+            if (results.multiHandLandmarks.length < 2) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.font = '24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('请将双手放入画面中', canvas.width / 2, canvas.height / 2);
+                // Still draw skeleton if one hand is visible
+                if (results.multiHandLandmarks.length === 1) {
+                    drawHandSkeleton(results.multiHandLandmarks[0], results.multiHandedness[0].label);
+                }
+                return;
+            }
+
+            const hand1 = results.multiHandLandmarks[0];
+            const hand2 = results.multiHandLandmarks[1];
+
+            const points = [
+                { x: (1 - hand1[4].x) * canvas.width, y: hand1[4].y * canvas.height },
+                { x: (1 - hand1[8].x) * canvas.width, y: hand1[8].y * canvas.height },
+                { x: (1 - hand2[8].x) * canvas.width, y: hand2[8].y * canvas.height },
+                { x: (1 - hand2[4].x) * canvas.width, y: hand2[4].y * canvas.height },
+            ];
+
+            const sorted = sortPointsClockwise(points);
+
+            applyQuadrilateralEffect(sorted);
+
+            // Draw quadrilateral outline
+            ctx.beginPath();
+            ctx.moveTo(sorted[0].x, sorted[0].y);
+            for (let i = 1; i < sorted.length; i++) {
+                ctx.lineTo(sorted[i].x, sorted[i].y);
+            }
+            ctx.closePath();
+            ctx.strokeStyle = 'rgba(108, 99, 255, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw corner points
+            const colors = ['#ff6b6b', '#ff6b6b', '#4ecdc4', '#4ecdc4'];
+            sorted.forEach((p, i) => {
+                drawPoint(p.x, p.y, colors[i]);
+            });
+
+            // Draw skeleton for both hands
+            drawHandSkeleton(hand1, results.multiHandedness[0].label);
+            drawHandSkeleton(hand2, results.multiHandedness[1].label);
+        }
+
+        // ============ Geometry Helpers ============
+        function sortPointsClockwise(points) {
+            const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+            const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+            return [...points].sort((a, b) => {
+                return Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx);
+            });
+        }
+
+        function isPointInPolygon(x, y, polygon) {
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                const xi = polygon[i].x, yi = polygon[i].y;
+                const xj = polygon[j].x, yj = polygon[j].y;
+                const intersect = ((yi > y) !== (yj > y)) &&
+                    (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        // ============ Color Helpers ============
+        // RGB -> HSL
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) {
+                h = s = 0;
+            } else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return [h * 360, s, l];
+        }
+
+        // HSL -> RGB
+        function hslToRgb(h, s, l) {
+            h /= 360;
+            let r, g, b;
+            if (s === 0) {
+                r = g = b = l;
+            } else {
+                const hue2rgb = (p, q, t) => {
+                    if (t < 0) t += 1;
+                    if (t > 1) t -= 1;
+                    if (t < 1/6) return p + (q - p) * 6 * t;
+                    if (t < 1/2) return q;
+                    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                    return p;
+                };
+                const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+                const p = 2 * l - q;
+                r = hue2rgb(p, q, h + 1/3);
+                g = hue2rgb(p, q, h);
+                b = hue2rgb(p, q, h - 1/3);
+            }
+            return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+        }
+
+        // ============ Effects ============
+        function applyCircularEffect(cx, cy, radius) {
+            const blockSize = mosaicBlockSize;
+            const startX = Math.max(0, Math.floor(cx - radius));
+            const endX = Math.min(canvas.width, Math.ceil(cx + radius));
+            const startY = Math.max(0, Math.floor(cy - radius));
+            const endY = Math.min(canvas.height, Math.ceil(cy + radius));
+            const w = endX - startX;
+            const h = endY - startY;
+
+            if (w <= 0 || h <= 0) return;
+
+            const imageData = offCtx.getImageData(startX, startY, w, h);
+            const data = imageData.data;
+            const outputData = ctx.getImageData(startX, startY, w, h);
+            const out = outputData.data;
+
+            if (currentEffect === 'mosaic') {
+                for (let by = 0; by < h; by += blockSize) {
+                    for (let bx = 0; bx < w; bx += blockSize) {
+                        const bcx = startX + bx + blockSize / 2;
+                        const bcy = startY + by + blockSize / 2;
+                        const dist = Math.sqrt(Math.pow(bcx - cx, 2) + Math.pow(bcy - cy, 2));
+                        if (dist > radius) continue;
+
+                        let r = 0, g = 0, b = 0, count = 0;
+                        const bxEnd = Math.min(bx + blockSize, w);
+                        const byEnd = Math.min(by + blockSize, h);
+                        for (let py = by; py < byEnd; py++) {
+                            for (let px = bx; px < bxEnd; px++) {
+                                const idx = (py * w + px) * 4;
+                                r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+
+                        for (let py = by; py < byEnd; py++) {
+                            for (let px = bx; px < bxEnd; px++) {
+                                const realX = startX + px;
+                                const realY = startY + py;
+                                const dist2 = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                                if (dist2 <= radius) {
+                                    const idx = (py * w + px) * 4;
+                                    out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Colorful hue-shift effect
+                for (let py = 0; py < h; py++) {
+                    for (let px = 0; px < w; px++) {
+                        const realX = startX + px;
+                        const realY = startY + py;
+                        const dist = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                        if (dist > radius) continue;
+
+                        const idx = (py * w + px) * 4;
+                        const [hue, sat, lit] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
+                        // Shift hue based on position + time animation
+                        const posOffset = ((realX + realY) / 3) % 360;
+                        const newHue = (hue + hueShift + posOffset) % 360;
+                        const newSat = Math.min(1, sat + 0.4); // boost saturation
+                        const [nr, ng, nb] = hslToRgb(newHue, newSat, lit);
+                        out[idx] = nr; out[idx + 1] = ng; out[idx + 2] = nb; out[idx + 3] = 255;
+                    }
+                }
+            }
+
+            ctx.putImageData(outputData, startX, startY);
+        }
+
+        function applyQuadrilateralEffect(points) {
+            const minX = Math.max(0, Math.floor(Math.min(...points.map(p => p.x))));
+            const maxX = Math.min(canvas.width, Math.ceil(Math.max(...points.map(p => p.x))));
+            const minY = Math.max(0, Math.floor(Math.min(...points.map(p => p.y))));
+            const maxY = Math.min(canvas.height, Math.ceil(Math.max(...points.map(p => p.y))));
+            const w = maxX - minX;
+            const h = maxY - minY;
+
+            if (w < 10 || h < 10) return;
+
+            const imageData = offCtx.getImageData(minX, minY, w, h);
+            const data = imageData.data;
+            const outputData = ctx.getImageData(minX, minY, w, h);
+            const out = outputData.data;
+
+            const blockSize = mosaicBlockSize;
+
+            if (currentEffect === 'mosaic') {
+                for (let by = 0; by < h; by += blockSize) {
+                    for (let bx = 0; bx < w; bx += blockSize) {
+                        const bcx = minX + bx + blockSize / 2;
+                        const bcy = minY + by + blockSize / 2;
+                        if (!isPointInPolygon(bcx, bcy, points)) continue;
+
+                        let r = 0, g = 0, b = 0, count = 0;
+                        const bxEnd = Math.min(bx + blockSize, w);
+                        const byEnd = Math.min(by + blockSize, h);
+                        for (let py = by; py < byEnd; py++) {
+                            for (let px = bx; px < bxEnd; px++) {
+                                const idx = (py * w + px) * 4;
+                                r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
+                                count++;
+                            }
+                        }
+                        if (count === 0) continue;
+                        r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+
+                        for (let py = by; py < byEnd; py++) {
+                            for (let px = bx; px < bxEnd; px++) {
+                                const realX = minX + px;
+                                const realY = minY + py;
+                                if (isPointInPolygon(realX, realY, points)) {
+                                    const idx = (py * w + px) * 4;
+                                    out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Colorful hue-shift effect
+                for (let py = 0; py < h; py++) {
+                    for (let px = 0; px < w; px++) {
+                        const realX = minX + px;
+                        const realY = minY + py;
+                        if (!isPointInPolygon(realX, realY, points)) continue;
+
+                        const idx = (py * w + px) * 4;
+                        const [hue, sat, lit] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
+                        const posOffset = ((realX + realY) / 3) % 360;
+                        const newHue = (hue + hueShift + posOffset) % 360;
+                        const newSat = Math.min(1, sat + 0.4);
+                        const [nr, ng, nb] = hslToRgb(newHue, newSat, lit);
+                        out[idx] = nr; out[idx + 1] = ng; out[idx + 2] = nb; out[idx + 3] = 255;
+                    }
+                }
+            }
+
+            ctx.putImageData(outputData, minX, minY);
+        }
+
+        // ============ Drawing Helpers ============
+        function drawPoint(x, y, color) {
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Glow effect
+            ctx.beginPath();
+            ctx.arc(x, y, 14, 0, Math.PI * 2);
+            ctx.strokeStyle = color + '44';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+
+        // ============ Start ============
+        startCamera();
+    </script>
+</body>
+</html>
