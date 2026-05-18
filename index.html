@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手势识别特效游戏</title>
+    <title>제스처 인식 특수효과 게임</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a2e;
+            background: #0a0a1a;
             color: #fff;
             overflow: hidden;
             height: 100vh;
@@ -74,6 +74,7 @@
         .btn.active {
             background: #6c63ff;
             color: #fff;
+            box-shadow: 0 0 12px rgba(108, 99, 255, 0.5);
         }
 
         .btn:hover {
@@ -101,6 +102,16 @@
             max-width: 100%;
             max-height: 100%;
             border-radius: 8px;
+        }
+
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
         }
 
         .status {
@@ -141,7 +152,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(26, 26, 46, 0.95);
+            background: rgba(10, 10, 26, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -169,19 +180,124 @@
             to { transform: rotate(360deg); }
         }
 
-        .hint {
-            position: absolute;
-            top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(108, 99, 255, 0.2);
-            border: 1px solid rgba(108, 99, 255, 0.4);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-size: 13px;
-            color: #c8c4ff;
-            z-index: 99;
-            text-align: center;
+        .effect-indicator {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            background: #6c63ff;
+            color: #fff;
+            transition: all 0.4s ease;
+            box-shadow: 0 0 8px rgba(108, 99, 255, 0.4);
+        }
+
+        .effect-indicator.thermal {
+            background: linear-gradient(135deg, #1a0a3e, #b5179e, #ef233c, #ff6d00, #ffbe0b, #fffde7);
+            background-size: 300% 300%;
+            animation: gradientShift 2s ease infinite;
+            box-shadow: 0 0 12px rgba(239, 35, 60, 0.5);
+        }
+
+        .effect-indicator.glitch {
+            background: linear-gradient(135deg, #0ff, #f0f, #0f0);
+            background-size: 300% 300%;
+            animation: gradientShift 1s ease infinite;
+            box-shadow: 0 0 12px rgba(0, 255, 255, 0.5);
+        }
+
+        .effect-indicator.blackhole {
+            background: radial-gradient(circle, #6c63ff, #1a1a2e);
+            box-shadow: 0 0 12px rgba(108, 99, 255, 0.6);
+        }
+
+        .effect-indicator.pixelstorm {
+            background: linear-gradient(45deg, #ff0080, #ff8c00, #40e0d0);
+            background-size: 300% 300%;
+            animation: gradientShift 1.5s ease infinite;
+            box-shadow: 0 0 12px rgba(255, 0, 128, 0.5);
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .music-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            background: #333;
+            color: #aaa;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .music-btn.playing {
+            background: #6c63ff;
+            color: #fff;
+            box-shadow: 0 0 12px rgba(108, 99, 255, 0.5);
+        }
+
+        .music-btn:hover {
+            background: #555;
+            transform: scale(1.1);
+        }
+
+        .music-btn.playing:hover {
+            background: #7c73ff;
+        }
+
+        /* Mini visualizer bars inside the button when playing */
+        .music-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            height: 14px;
+        }
+
+        .music-bars .bar {
+            width: 3px;
+            background: currentColor;
+            border-radius: 1px;
+            transition: height 0.1s ease;
+        }
+
+        .music-btn:not(.playing) .music-bars .bar {
+            height: 3px !important;
+        }
+
+        .music-btn.playing .bar:nth-child(1) { animation: barAnim 0.8s ease-in-out infinite; }
+        .music-btn.playing .bar:nth-child(2) { animation: barAnim 0.6s ease-in-out infinite 0.1s; }
+        .music-btn.playing .bar:nth-child(3) { animation: barAnim 0.7s ease-in-out infinite 0.2s; }
+        .music-btn.playing .bar:nth-child(4) { animation: barAnim 0.5s ease-in-out infinite 0.15s; }
+
+        @keyframes barAnim {
+            0%, 100% { height: 4px; }
+            50% { height: 14px; }
+        }
+
+        .volume-slider {
+            width: 60px;
+            accent-color: #6c63ff;
+            opacity: 0;
+            transition: opacity 0.3s, width 0.3s;
+            width: 0;
+            pointer-events: none;
+        }
+
+        .control-group:hover .volume-slider,
+        .volume-slider:focus {
+            opacity: 1;
+            width: 60px;
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -189,68 +305,393 @@
     <div class="container">
         <div class="loading-overlay" id="loadingOverlay">
             <div class="loading-spinner"></div>
-            <p>正在加载手势识别模型...</p>
+            <p>제스처 인식 모델 로딩 중...</p>
         </div>
 
         <div class="controls">
             <div class="control-group">
-                <label>模式:</label>
+                <label>모드:</label>
                 <div class="btn-group">
-                    <button class="btn active" id="btnSingle" onclick="setMode('single')">单手</button>
-                    <button class="btn" id="btnDual" onclick="setMode('dual')">双手</button>
+                    <button class="btn active" id="btnSingle" onclick="setMode('single')">한 손</button>
+                    <button class="btn" id="btnDual" onclick="setMode('dual')">양 손</button>
                 </div>
             </div>
             <div class="control-group">
-                <label>效果:</label>
-                <div class="btn-group">
-                    <button class="btn active" id="btnMosaic" onclick="setEffect('mosaic')">马赛克</button>
-                    <button class="btn" id="btnThermal" onclick="setEffect('colorful')">炫彩</button>
-                </div>
+                <label>효과:</label>
+                <span class="effect-indicator" id="effectIndicator">모자이크</span>
             </div>
             <div class="control-group">
-                <label>块大小:</label>
+                <label>블록 크기:</label>
                 <input type="range" id="mosaicSize" min="5" max="30" value="12"
                     style="width: 80px; accent-color: #6c63ff;">
             </div>
-        </div>
-
-        <div class="hint" id="hintText">
-            单手模式：用拇指和食指形成圆形区域 | 双手模式：用双手拇指和食指形成四边形区域
+            <div class="control-group">
+                <button class="music-btn" id="musicBtn" onclick="toggleMusic()" title="BGM">
+                    <div class="music-bars">
+                        <div class="bar" style="height:3px"></div>
+                        <div class="bar" style="height:3px"></div>
+                        <div class="bar" style="height:3px"></div>
+                        <div class="bar" style="height:3px"></div>
+                    </div>
+                </button>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="40" title="볼륨">
+            </div>
         </div>
 
         <div class="canvas-container">
             <video id="videoElement" autoplay playsinline></video>
             <canvas id="outputCanvas"></canvas>
+            <canvas id="particleCanvas"></canvas>
         </div>
 
         <div class="status">
             <span class="dot" id="statusDot"></span>
-            <span id="statusText">等待连接摄像头...</span>
+            <span id="statusText">카메라 연결 대기 중...</span>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4.1675469240/hands.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1675466862/camera_utils.min.js"></script>
     <script>
+        // ============ BGM System (Web Audio API Synthesized) ============
+        let audioCtx = null;
+        let bgmPlaying = false;
+        let bgmGain = null;
+        let bgmNodes = [];
+
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            bgmGain = audioCtx.createGain();
+            bgmGain.gain.value = 0.4;
+            bgmGain.connect(audioCtx.destination);
+        }
+
+        function toggleMusic() {
+            const btn = document.getElementById('musicBtn');
+            if (!bgmPlaying) {
+                initAudio();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                startBGM();
+                bgmPlaying = true;
+                btn.classList.add('playing');
+            } else {
+                stopBGM();
+                bgmPlaying = false;
+                btn.classList.remove('playing');
+            }
+        }
+
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            if (bgmGain) {
+                bgmGain.gain.value = parseInt(e.target.value) / 100;
+            }
+        });
+
+        function stopBGM() {
+            bgmNodes.forEach(n => { try { n.stop(); } catch(e) {} try { n.disconnect(); } catch(e) {} });
+            bgmNodes = [];
+        }
+
+        function startBGM() {
+            stopBGM();
+            const now = audioCtx.currentTime;
+
+            // --- Tempo & Key ---
+            const BPM = 85;
+            const beatDur = 60 / BPM;
+            const barDur = beatDur * 4;
+            const totalBars = 8;
+            const loopDur = barDur * totalBars;
+
+            // --- Bass Synth (sub + mid layer) ---
+            // Dm pentatonic: D2, F2, G2, A2, C3
+            const bassNotes = [73.42, 87.31, 98.00, 110.00, 130.81, 98.00, 110.00, 87.31];
+            for (let bar = 0; bar < totalBars; bar++) {
+                const freq = bassNotes[bar % bassNotes.length];
+                // Sub bass
+                const subOsc = audioCtx.createOscillator();
+                const subGain = audioCtx.createGain();
+                subOsc.type = 'sine';
+                subOsc.frequency.value = freq;
+                subGain.gain.setValueAtTime(0, now + bar * barDur);
+                subGain.gain.linearRampToValueAtTime(0.35, now + bar * barDur + 0.05);
+                subGain.gain.setValueAtTime(0.35, now + bar * barDur + barDur * 0.7);
+                subGain.gain.linearRampToValueAtTime(0, now + bar * barDur + barDur * 0.95);
+                subOsc.connect(subGain);
+                subGain.connect(bgmGain);
+                subOsc.start(now + bar * barDur);
+                subOsc.stop(now + bar * barDur + barDur);
+                bgmNodes.push(subOsc);
+
+                // Mid bass (saw-ish via additive)
+                const midOsc = audioCtx.createOscillator();
+                const midGain = audioCtx.createGain();
+                const midFilter = audioCtx.createBiquadFilter();
+                midOsc.type = 'sawtooth';
+                midOsc.frequency.value = freq * 2;
+                midFilter.type = 'lowpass';
+                midFilter.frequency.value = 400;
+                midFilter.Q.value = 5;
+                midGain.gain.setValueAtTime(0, now + bar * barDur);
+                midGain.gain.linearRampToValueAtTime(0.12, now + bar * barDur + 0.02);
+                midGain.gain.exponentialRampToValueAtTime(0.01, now + bar * barDur + barDur * 0.4);
+                midOsc.connect(midFilter);
+                midFilter.connect(midGain);
+                midGain.connect(bgmGain);
+                midOsc.start(now + bar * barDur);
+                midOsc.stop(now + bar * barDur + barDur);
+                bgmNodes.push(midOsc);
+            }
+
+            // --- Kick Drum ---
+            for (let bar = 0; bar < totalBars; bar++) {
+                for (let beat = 0; beat < 4; beat++) {
+                    const t = now + bar * barDur + beat * beatDur;
+                    const kickOsc = audioCtx.createOscillator();
+                    const kickGain = audioCtx.createGain();
+                    kickOsc.type = 'sine';
+                    kickOsc.frequency.setValueAtTime(150, t);
+                    kickOsc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+                    kickGain.gain.setValueAtTime(0.6, t);
+                    kickGain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+                    kickOsc.connect(kickGain);
+                    kickGain.connect(bgmGain);
+                    kickOsc.start(t);
+                    kickOsc.stop(t + 0.35);
+                    bgmNodes.push(kickOsc);
+                }
+            }
+
+            // --- Hi-Hat (noise burst) ---
+            for (let bar = 0; bar < totalBars; bar++) {
+                for (let eighth = 0; eighth < 8; eighth++) {
+                    const t = now + bar * barDur + eighth * beatDur / 2;
+                    const isOffbeat = eighth % 2 === 1;
+                    const vol = isOffbeat ? 0.08 : 0.04;
+
+                    const bufferSize = audioCtx.sampleRate * 0.05;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const hihatFilter = audioCtx.createBiquadFilter();
+                    hihatFilter.type = 'highpass';
+                    hihatFilter.frequency.value = 7000;
+                    const hihatGain = audioCtx.createGain();
+                    hihatGain.gain.setValueAtTime(vol, t);
+                    hihatGain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+                    noise.connect(hihatFilter);
+                    hihatFilter.connect(hihatGain);
+                    hihatGain.connect(bgmGain);
+                    noise.start(t);
+                    noise.stop(t + 0.06);
+                    bgmNodes.push(noise);
+                }
+            }
+
+            // --- Pad / Atmosphere (filtered saw chord) ---
+            const padChords = [
+                [293.66, 349.23, 440.00],  // Dm (D4, F4, A4)
+                [261.63, 329.63, 392.00],  // C (C4, E4, G4)
+                [220.00, 293.66, 349.23],  // Dm low
+                [246.94, 311.13, 369.99],  // Bb (Bb3, D4, F#4-ish)
+            ];
+            for (let bar = 0; bar < totalBars; bar++) {
+                const chord = padChords[Math.floor(bar / 2) % padChords.length];
+                const t = now + bar * barDur;
+                chord.forEach(freq => {
+                    const padOsc = audioCtx.createOscillator();
+                    const padGain = audioCtx.createGain();
+                    const padFilter = audioCtx.createBiquadFilter();
+                    padOsc.type = 'sawtooth';
+                    padOsc.frequency.value = freq;
+                    // Slow filter sweep
+                    padFilter.type = 'lowpass';
+                    padFilter.frequency.setValueAtTime(300, t);
+                    padFilter.frequency.linearRampToValueAtTime(800, t + barDur * 0.6);
+                    padFilter.frequency.linearRampToValueAtTime(300, t + barDur);
+                    padFilter.Q.value = 2;
+                    padGain.gain.setValueAtTime(0, t);
+                    padGain.gain.linearRampToValueAtTime(0.04, t + barDur * 0.2);
+                    padGain.gain.setValueAtTime(0.04, t + barDur * 0.8);
+                    padGain.gain.linearRampToValueAtTime(0, t + barDur);
+                    padOsc.connect(padFilter);
+                    padFilter.connect(padGain);
+                    padGain.connect(bgmGain);
+                    padOsc.start(t);
+                    padOsc.stop(t + barDur + 0.1);
+                    bgmNodes.push(padOsc);
+                });
+            }
+
+            // --- Arp Synth (cyber melody) ---
+            const arpNotes = [587.33, 440.00, 523.25, 659.25, 440.00, 523.25, 587.33, 698.46,
+                              523.25, 440.00, 587.33, 659.25, 523.25, 698.46, 587.33, 440.00];
+            const arpStep = beatDur / 2;
+            for (let bar = 0; bar < totalBars; bar++) {
+                for (let step = 0; step < 8; step++) {
+                    const noteIdx = (bar * 8 + step) % arpNotes.length;
+                    // Skip some steps for rhythm
+                    if (bar % 2 === 0 && (step === 2 || step === 5)) continue;
+                    if (bar % 2 === 1 && (step === 1 || step === 6)) continue;
+
+                    const t = now + bar * barDur + step * arpStep;
+                    const freq = arpNotes[noteIdx];
+                    const arpOsc = audioCtx.createOscillator();
+                    const arpGain = audioCtx.createGain();
+                    const arpFilter = audioCtx.createBiquadFilter();
+                    arpOsc.type = 'square';
+                    arpOsc.frequency.value = freq;
+                    arpFilter.type = 'lowpass';
+                    arpFilter.frequency.value = 2000 + Math.sin(bar + step) * 500;
+                    arpFilter.Q.value = 3;
+                    arpGain.gain.setValueAtTime(0.07, t);
+                    arpGain.gain.exponentialRampToValueAtTime(0.001, t + arpStep * 0.8);
+                    arpOsc.connect(arpFilter);
+                    arpFilter.connect(arpGain);
+                    arpGain.connect(bgmGain);
+                    arpOsc.start(t);
+                    arpOsc.stop(t + arpStep);
+                    bgmNodes.push(arpOsc);
+                }
+            }
+
+            // Schedule loop
+            const loopTimeout = setTimeout(() => {
+                if (bgmPlaying) startBGM();
+            }, loopDur * 1000 - 100);
+            bgmNodes.push({ stop: () => clearTimeout(loopTimeout), disconnect: () => {} });
+        }
+
         // ============ State ============
         let currentMode = 'single';
         let currentEffect = 'mosaic';
+        const EFFECTS = ['mosaic', 'thermal', 'glitch', 'blackhole', 'pixelstorm'];
         let mosaicBlockSize = 12;
         let isReady = false;
-        let hueShift = 0; // animated hue rotation for colorful mode
+        let hueShift = 0;
+        let frameCount = 0;
+
+        // ============ Pinch Detection State ============
+        const pinchState = { Left: false, Right: false };
+        const PINCH_THRESHOLD = 0.04;
+        let switchCooldown = false;
+
+        // ============ Particle System ============
+        const particles = [];
+        const MAX_PARTICLES = 300;
+        const trailPoints = { Left: [], Right: [] }; // fingertip trails
+
+        class Particle {
+            constructor(x, y, options = {}) {
+                this.x = x;
+                this.y = y;
+                this.vx = options.vx || (Math.random() - 0.5) * 8;
+                this.vy = options.vy || (Math.random() - 0.5) * 8;
+                this.life = options.life || 1.0;
+                this.decay = options.decay || (0.015 + Math.random() * 0.02);
+                this.size = options.size || (2 + Math.random() * 4);
+                this.hue = options.hue || Math.random() * 360;
+                this.type = options.type || 'spark'; // spark, burst, trail, electric
+                this.gravity = options.gravity || 0;
+                this.friction = options.friction || 0.98;
+            }
+
+            update() {
+                this.vx *= this.friction;
+                this.vy *= this.friction;
+                this.vy += this.gravity;
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                return this.life > 0;
+            }
+
+            draw(pCtx) {
+                const alpha = this.life;
+                if (this.type === 'spark') {
+                    pCtx.beginPath();
+                    pCtx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+                    pCtx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${alpha})`;
+                    pCtx.fill();
+                    // glow
+                    pCtx.beginPath();
+                    pCtx.arc(this.x, this.y, this.size * alpha * 2.5, 0, Math.PI * 2);
+                    pCtx.fillStyle = `hsla(${this.hue}, 100%, 70%, ${alpha * 0.3})`;
+                    pCtx.fill();
+                } else if (this.type === 'burst') {
+                    const s = this.size * (1 + (1 - alpha) * 2);
+                    pCtx.beginPath();
+                    pCtx.arc(this.x, this.y, s, 0, Math.PI * 2);
+                    pCtx.fillStyle = `hsla(${this.hue}, 100%, 80%, ${alpha * 0.6})`;
+                    pCtx.fill();
+                } else if (this.type === 'electric') {
+                    pCtx.beginPath();
+                    pCtx.arc(this.x, this.y, this.size * alpha * 1.5, 0, Math.PI * 2);
+                    pCtx.fillStyle = `hsla(${200 + Math.random() * 60}, 100%, 80%, ${alpha})`;
+                    pCtx.fill();
+                }
+            }
+        }
+
+        function emitParticles(x, y, count, options = {}) {
+            for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+                particles.push(new Particle(x, y, options));
+            }
+        }
+
+        function emitBurst(x, y, count = 40) {
+            for (let i = 0; i < count && particles.length < MAX_PARTICLES; i++) {
+                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+                const speed = 3 + Math.random() * 8;
+                particles.push(new Particle(x, y, {
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    type: 'burst',
+                    hue: (hueShift + i * 9) % 360,
+                    life: 0.8 + Math.random() * 0.4,
+                    decay: 0.02 + Math.random() * 0.015,
+                    size: 3 + Math.random() * 3,
+                    gravity: 0.1,
+                    friction: 0.96
+                }));
+            }
+        }
+
+        function emitElectricArc(x1, y1, x2, y2, segments = 8) {
+            const dx = (x2 - x1) / segments;
+            const dy = (y2 - y1) / segments;
+            for (let i = 0; i <= segments; i++) {
+                const jitter = i === 0 || i === segments ? 0 : (Math.random() - 0.5) * 20;
+                const px = x1 + dx * i + jitter;
+                const py = y1 + dy * i + (Math.random() - 0.5) * 20;
+                particles.push(new Particle(px, py, {
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    type: 'electric',
+                    hue: 200 + Math.random() * 60,
+                    life: 0.3 + Math.random() * 0.3,
+                    decay: 0.05,
+                    size: 2 + Math.random() * 2,
+                    friction: 0.9
+                }));
+            }
+        }
 
         // ============ Hand Skeleton Connections ============
-        // MediaPipe 21 landmarks: wrist=0, thumb=1-4, index=5-8, middle=9-12, ring=13-16, pinky=17-20
         const HAND_CONNECTIONS = [
-            [0,1],[1,2],[2,3],[3,4],       // thumb
-            [0,5],[5,6],[6,7],[7,8],       // index
-            [0,9],[9,10],[10,11],[11,12],  // middle (via 9)
-            [0,13],[13,14],[14,15],[15,16],// ring (via 13)
-            [0,17],[17,18],[18,19],[19,20],// pinky
-            [5,9],[9,13],[13,17]           // palm cross-connections
+            [0,1],[1,2],[2,3],[3,4],
+            [0,5],[5,6],[6,7],[7,8],
+            [0,9],[9,10],[10,11],[11,12],
+            [0,13],[13,14],[14,15],[15,16],
+            [0,17],[17,18],[18,19],[19,20],
+            [5,9],[9,13],[13,17]
         ];
 
-        // Bone colors per finger group
         const BONE_COLORS = {
             thumb:  '#ff6b6b',
             index:  '#ffd93d',
@@ -282,6 +723,8 @@
         const video = document.getElementById('videoElement');
         const canvas = document.getElementById('outputCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const particleCanvas = document.getElementById('particleCanvas');
+        const pCtx = particleCanvas.getContext('2d');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
@@ -296,16 +739,94 @@
             currentMode = mode;
             document.getElementById('btnSingle').classList.toggle('active', mode === 'single');
             document.getElementById('btnDual').classList.toggle('active', mode === 'dual');
-            document.getElementById('hintText').textContent =
-                mode === 'single'
-                    ? '单手模式：左右手各自的拇指与食指形成圆形区域，同时显示骨架'
-                    : '双手模式：用双手拇指和食指形成四边形区域';
         }
 
         function setEffect(effect) {
             currentEffect = effect;
-            document.getElementById('btnMosaic').classList.toggle('active', effect === 'mosaic');
-            document.getElementById('btnThermal').classList.toggle('active', effect === 'colorful');
+            const indicator = document.getElementById('effectIndicator');
+            indicator.className = 'effect-indicator';
+            switch (effect) {
+                case 'mosaic':
+                    indicator.textContent = '모자이크';
+                    break;
+                case 'thermal':
+                    indicator.textContent = '열화상';
+                    indicator.classList.add('thermal');
+                    break;
+                case 'glitch':
+                    indicator.textContent = '글리치';
+                    indicator.classList.add('glitch');
+                    break;
+                case 'blackhole':
+                    indicator.textContent = '블랙홀';
+                    indicator.classList.add('blackhole');
+                    break;
+                case 'pixelstorm':
+                    indicator.textContent = '픽셀 폭풍';
+                    indicator.classList.add('pixelstorm');
+                    break;
+            }
+        }
+
+        // Toggle effect - cycle through all effects
+        function toggleEffect() {
+            const idx = EFFECTS.indexOf(currentEffect);
+            const nextIdx = (idx + 1) % EFFECTS.length;
+            setEffect(EFFECTS[nextIdx]);
+        }
+
+        // ============ Pinch Detection ============
+        function getPinchDistance(hand) {
+            const thumb = hand[4];
+            const index = hand[8];
+            const dx = thumb.x - index.x;
+            const dy = thumb.y - index.y;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function detectPinchToggle(results) {
+            if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+                pinchState.Left = false;
+                pinchState.Right = false;
+                return;
+            }
+
+            const visibleHands = new Set();
+
+            for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                const hand = results.multiHandLandmarks[h];
+                const label = results.multiHandedness[h].label;
+                visibleHands.add(label);
+
+                const dist = getPinchDistance(hand);
+                const isPinching = dist < PINCH_THRESHOLD;
+
+                // Emit electric arc when pinching
+                if (isPinching) {
+                    const tx = (1 - hand[4].x) * canvas.width;
+                    const ty = hand[4].y * canvas.height;
+                    const ix = (1 - hand[8].x) * canvas.width;
+                    const iy = hand[8].y * canvas.height;
+                    if (frameCount % 3 === 0) {
+                        emitElectricArc(tx, ty, ix, iy, 5);
+                    }
+                }
+
+                if (pinchState[label] && !isPinching && !switchCooldown) {
+                    // Burst on release
+                    const tx = (1 - hand[4].x) * canvas.width;
+                    const ty = hand[4].y * canvas.height;
+                    emitBurst(tx, ty, 35);
+                    toggleEffect();
+                    switchCooldown = true;
+                    setTimeout(() => { switchCooldown = false; }, 800);
+                }
+
+                pinchState[label] = isPinching;
+            }
+
+            if (!visibleHands.has('Left'))  pinchState.Left = false;
+            if (!visibleHands.has('Right')) pinchState.Right = false;
         }
 
         mosaicSizeSlider.addEventListener('input', (e) => {
@@ -341,9 +862,11 @@
                 canvas.height = video.videoHeight;
                 offCanvas.width = video.videoWidth;
                 offCanvas.height = video.videoHeight;
+                particleCanvas.width = video.videoWidth;
+                particleCanvas.height = video.videoHeight;
 
                 statusDot.classList.add('connected');
-                statusText.textContent = '摄像头已连接 - 请将手放入画面';
+                statusText.textContent = '카메라 연결됨 - 손을 화면에 넣어주세요';
 
                 const camera = new Camera(video, {
                     onFrame: async () => {
@@ -354,10 +877,58 @@
                 });
                 camera.start();
 
+                // Start particle render loop
+                requestAnimationFrame(renderParticles);
+
             } catch (err) {
-                statusText.textContent = '无法访问摄像头: ' + err.message;
+                statusText.textContent = '카메라에 접근할 수 없습니다: ' + err.message;
                 console.error('Camera error:', err);
             }
+        }
+
+        // ============ Particle Render Loop ============
+        function renderParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+
+            // Draw trails
+            for (const hand of ['Left', 'Right']) {
+                const trail = trailPoints[hand];
+                if (trail.length > 2) {
+                    pCtx.beginPath();
+                    pCtx.moveTo(trail[0].x, trail[0].y);
+                    for (let i = 1; i < trail.length; i++) {
+                        pCtx.lineTo(trail[i].x, trail[i].y);
+                    }
+                    const gradient = pCtx.createLinearGradient(
+                        trail[0].x, trail[0].y,
+                        trail[trail.length - 1].x, trail[trail.length - 1].y
+                    );
+                    const baseHue = hand === 'Left' ? 200 : 0;
+                    gradient.addColorStop(0, `hsla(${baseHue}, 100%, 70%, 0)`);
+                    gradient.addColorStop(1, `hsla(${baseHue}, 100%, 70%, 0.8)`);
+                    pCtx.strokeStyle = gradient;
+                    pCtx.lineWidth = 3;
+                    pCtx.lineCap = 'round';
+                    pCtx.lineJoin = 'round';
+                    pCtx.stroke();
+
+                    // Outer glow trail
+                    pCtx.strokeStyle = `hsla(${baseHue}, 100%, 70%, 0.2)`;
+                    pCtx.lineWidth = 10;
+                    pCtx.stroke();
+                }
+            }
+
+            // Update and draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (!particles[i].update()) {
+                    particles.splice(i, 1);
+                } else {
+                    particles[i].draw(pCtx);
+                }
+            }
+
+            requestAnimationFrame(renderParticles);
         }
 
         // ============ Results Handler ============
@@ -367,7 +938,7 @@
                 loadingOverlay.classList.add('hidden');
             }
 
-            // Advance hue for colorful mode animation
+            frameCount++;
             hueShift = (hueShift + 2) % 360;
 
             // Draw mirrored camera frame
@@ -384,9 +955,18 @@
             offCtx.drawImage(results.image, 0, 0, offCanvas.width, offCanvas.height);
             offCtx.restore();
 
+            // Detect pinch gesture for effect toggle
+            detectPinchToggle(results);
+
+            // Update fingertip trails
+            updateTrails(results);
+
             if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
                 return;
             }
+
+            // Emit fingertip particles
+            emitFingertipParticles(results);
 
             if (currentMode === 'single') {
                 handleSingleHandMode(results);
@@ -395,72 +975,145 @@
             }
         }
 
-        // ============ Draw Hand Skeleton ============
-        function drawHandSkeleton(landmarks, handLabel) {
-            // handLabel: 'Left' or 'Right' (from MediaPipe, pre-mirror)
-            // After mirroring the display, Left/Right swap visually
-            const isLeft = (handLabel === 'Left');
-            const baseHue = isLeft ? 200 : 0; // blue-ish for left, red-ish for right
+        // ============ Trail & Fingertip Particles ============
+        function updateTrails(results) {
+            const maxTrailLen = 20;
+            const visibleHands = new Set();
 
-            // Convert landmarks to mirrored canvas coords
+            if (results.multiHandLandmarks) {
+                for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                    const hand = results.multiHandLandmarks[h];
+                    const label = results.multiHandedness[h].label;
+                    visibleHands.add(label);
+                    // Track index fingertip
+                    const ix = (1 - hand[8].x) * canvas.width;
+                    const iy = hand[8].y * canvas.height;
+                    trailPoints[label].push({ x: ix, y: iy });
+                    if (trailPoints[label].length > maxTrailLen) {
+                        trailPoints[label].shift();
+                    }
+                }
+            }
+
+            if (!visibleHands.has('Left')) trailPoints.Left = [];
+            if (!visibleHands.has('Right')) trailPoints.Right = [];
+        }
+
+        function emitFingertipParticles(results) {
+            if (frameCount % 2 !== 0) return; // throttle
+            for (let h = 0; h < results.multiHandLandmarks.length; h++) {
+                const hand = results.multiHandLandmarks[h];
+                const label = results.multiHandedness[h].label;
+                // Emit from all fingertips
+                const tips = [4, 8, 12, 16, 20];
+                for (const tip of tips) {
+                    const x = (1 - hand[tip].x) * canvas.width;
+                    const y = hand[tip].y * canvas.height;
+                    if (Math.random() < 0.3) {
+                        emitParticles(x, y, 1, {
+                            type: 'spark',
+                            hue: (label === 'Left' ? 200 : 0) + tip * 15,
+                            vx: (Math.random() - 0.5) * 3,
+                            vy: (Math.random() - 0.5) * 3 - 1,
+                            size: 1.5 + Math.random() * 2,
+                            life: 0.5 + Math.random() * 0.5,
+                            decay: 0.02,
+                            gravity: 0.05
+                        });
+                    }
+                }
+            }
+        }
+
+        // ============ Draw Hand Skeleton (Neon Style) ============
+        function drawHandSkeleton(landmarks, handLabel) {
+            const isLeft = (handLabel === 'Left');
+            const baseHue = isLeft ? 200 : 0;
+
             const pts = landmarks.map(lm => ({
                 x: (1 - lm.x) * canvas.width,
                 y: lm.y * canvas.height
             }));
 
-            // Draw bones
+            // Draw neon bones with multiple glow layers
             for (const [i, j] of HAND_CONNECTIONS) {
                 const color = getBoneColor(i, j);
+
+                // Outer glow
                 ctx.beginPath();
                 ctx.moveTo(pts[i].x, pts[i].y);
                 ctx.lineTo(pts[j].x, pts[j].y);
-                ctx.strokeStyle = color;
-                ctx.lineWidth = 4;
+                ctx.strokeStyle = color + '22';
+                ctx.lineWidth = 14;
                 ctx.lineCap = 'round';
                 ctx.stroke();
 
-                // Glow
+                // Mid glow
                 ctx.beginPath();
                 ctx.moveTo(pts[i].x, pts[i].y);
                 ctx.lineTo(pts[j].x, pts[j].y);
                 ctx.strokeStyle = color + '55';
                 ctx.lineWidth = 8;
                 ctx.stroke();
+
+                // Core line
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[j].x, pts[j].y);
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Bright center
+                ctx.beginPath();
+                ctx.moveTo(pts[i].x, pts[i].y);
+                ctx.lineTo(pts[j].x, pts[j].y);
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.5;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
             }
 
-            // Draw joints
-            const tipIndices = [4, 8, 12, 16, 20]; // fingertips
+            // Draw joints with pulsing glow
+            const tipIndices = [4, 8, 12, 16, 20];
+            const pulseScale = 1 + Math.sin(frameCount * 0.1) * 0.2;
             for (let k = 0; k < pts.length; k++) {
                 const isTip = tipIndices.includes(k);
                 const isWrist = (k === 0);
-                const r = isTip ? 7 : isWrist ? 8 : 5;
-                const fillColor = isTip ? '#fff' : (isWrist ? `hsl(${baseHue},70%,60%)` : '#ddd');
+                const baseR = isTip ? 7 : isWrist ? 8 : 4;
+                const r = isTip ? baseR * pulseScale : baseR;
+
+                // Outer glow for fingertips
+                if (isTip) {
+                    ctx.beginPath();
+                    ctx.arc(pts[k].x, pts[k].y, r * 3, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${baseHue + k * 15}, 100%, 70%, 0.15)`;
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(pts[k].x, pts[k].y, r * 2, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsla(${baseHue + k * 15}, 100%, 70%, 0.3)`;
+                    ctx.fill();
+                }
 
                 ctx.beginPath();
                 ctx.arc(pts[k].x, pts[k].y, r, 0, Math.PI * 2);
-                ctx.fillStyle = fillColor;
+                ctx.fillStyle = isTip ? '#fff' : (isWrist ? `hsl(${baseHue},70%,60%)` : '#ddd');
                 ctx.fill();
-                ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = `hsla(${baseHue}, 80%, 70%, 0.8)`;
+                ctx.lineWidth = 2;
                 ctx.stroke();
             }
-
-            // Label at wrist
-            const label = isLeft ? '右手' : '左手'; // mirror swap
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillStyle = `hsl(${baseHue},80%,70%)`;
-            ctx.textAlign = 'center';
-            ctx.fillText(label, pts[0].x, pts[0].y + 24);
         }
 
         // ============ Single Hand Mode ============
         function handleSingleHandMode(results) {
             if (results.multiHandLandmarks.length < 1) return;
 
-            // Process each detected hand independently
             for (let h = 0; h < results.multiHandLandmarks.length; h++) {
                 const hand = results.multiHandLandmarks[h];
-                const handedness = results.multiHandedness[h].label; // 'Left' or 'Right'
+                const handedness = results.multiHandedness[h].label;
                 const thumbTip = hand[4];
                 const indexTip = hand[8];
 
@@ -475,32 +1128,73 @@
 
                 if (radius >= 10) {
                     applyCircularEffect(centerX, centerY, radius);
-
-                    // Circle outline with hand-specific color
-                    const circleColor = (handedness === 'Left')
-                        ? 'rgba(100, 180, 255, 0.8)' : 'rgba(255, 100, 130, 0.8)';
-                    ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                    ctx.strokeStyle = circleColor;
-                    ctx.lineWidth = 3;
-                    ctx.setLineDash([8, 4]);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
+                    drawEffectCircle(centerX, centerY, radius, handedness);
                 }
 
-                // Draw skeleton for this hand
                 drawHandSkeleton(hand, handedness);
+            }
+        }
+
+        // ============ Animated Effect Circle ============
+        function drawEffectCircle(cx, cy, radius, handedness) {
+            const baseHue = handedness === 'Left' ? 200 : 350;
+            const rotation = frameCount * 0.03;
+
+            // Rotating dashed energy ring
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(rotation);
+
+            // Outer energy ring
+            ctx.beginPath();
+            ctx.arc(0, 0, radius + 5, 0, Math.PI * 2);
+            ctx.strokeStyle = `hsla(${baseHue}, 100%, 70%, 0.2)`;
+            ctx.lineWidth = 8;
+            ctx.stroke();
+
+            // Animated dashes
+            const dashCount = 16;
+            for (let i = 0; i < dashCount; i++) {
+                const angle = (Math.PI * 2 * i) / dashCount;
+                const alpha = 0.4 + Math.sin(frameCount * 0.1 + i) * 0.3;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, angle, angle + Math.PI / dashCount);
+                ctx.strokeStyle = `hsla(${(baseHue + i * 20) % 360}, 100%, 70%, ${alpha})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // Inner glow
+            const gradient = ctx.createRadialGradient(0, 0, radius * 0.8, 0, 0, radius);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, `hsla(${baseHue}, 100%, 70%, 0.1)`);
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.restore();
+
+            // Emit particles along the ring edge
+            if (frameCount % 4 === 0) {
+                const angle = Math.random() * Math.PI * 2;
+                const px = cx + Math.cos(angle) * radius;
+                const py = cy + Math.sin(angle) * radius;
+                emitParticles(px, py, 1, {
+                    type: 'spark',
+                    hue: baseHue + Math.random() * 60,
+                    vx: Math.cos(angle) * 2,
+                    vy: Math.sin(angle) * 2,
+                    size: 2,
+                    life: 0.6,
+                    decay: 0.02
+                });
             }
         }
 
         // ============ Dual Hand Mode ============
         function handleDualHandMode(results) {
             if (results.multiHandLandmarks.length < 2) {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                ctx.font = '24px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('请将双手放入画面中', canvas.width / 2, canvas.height / 2);
-                // Still draw skeleton if one hand is visible
                 if (results.multiHandLandmarks.length === 1) {
                     drawHandSkeleton(results.multiHandLandmarks[0], results.multiHandedness[0].label);
                 }
@@ -520,29 +1214,76 @@
             const sorted = sortPointsClockwise(points);
 
             applyQuadrilateralEffect(sorted);
+            drawEffectQuad(sorted);
 
-            // Draw quadrilateral outline
+            drawHandSkeleton(hand1, results.multiHandedness[0].label);
+            drawHandSkeleton(hand2, results.multiHandedness[1].label);
+        }
+
+        // ============ Animated Effect Quad ============
+        function drawEffectQuad(sorted) {
+            // Energy border with animated gradient
+            ctx.save();
             ctx.beginPath();
             ctx.moveTo(sorted[0].x, sorted[0].y);
             for (let i = 1; i < sorted.length; i++) {
                 ctx.lineTo(sorted[i].x, sorted[i].y);
             }
             ctx.closePath();
-            ctx.strokeStyle = 'rgba(108, 99, 255, 0.8)';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([8, 4]);
-            ctx.stroke();
-            ctx.setLineDash([]);
 
-            // Draw corner points
-            const colors = ['#ff6b6b', '#ff6b6b', '#4ecdc4', '#4ecdc4'];
+            // Animated border
+            const borderHue = (hueShift * 2) % 360;
+            ctx.strokeStyle = `hsla(${borderHue}, 100%, 70%, 0.8)`;
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Outer glow
+            ctx.strokeStyle = `hsla(${borderHue}, 100%, 70%, 0.3)`;
+            ctx.lineWidth = 10;
+            ctx.stroke();
+
+            ctx.restore();
+
+            // Corner energy nodes
             sorted.forEach((p, i) => {
-                drawPoint(p.x, p.y, colors[i]);
+                const nodeHue = (hueShift + i * 90) % 360;
+                const pulse = 1 + Math.sin(frameCount * 0.15 + i) * 0.3;
+
+                // Glow
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 15 * pulse, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${nodeHue}, 100%, 70%, 0.2)`;
+                ctx.fill();
+
+                // Core
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 7 * pulse, 0, Math.PI * 2);
+                ctx.fillStyle = `hsla(${nodeHue}, 100%, 80%, 0.9)`;
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
             });
 
-            // Draw skeleton for both hands
-            drawHandSkeleton(hand1, results.multiHandedness[0].label);
-            drawHandSkeleton(hand2, results.multiHandedness[1].label);
+            // Emit particles along edges
+            if (frameCount % 5 === 0) {
+                const edgeIdx = Math.floor(Math.random() * 4);
+                const p1 = sorted[edgeIdx];
+                const p2 = sorted[(edgeIdx + 1) % 4];
+                const t = Math.random();
+                const px = p1.x + (p2.x - p1.x) * t;
+                const py = p1.y + (p2.y - p1.y) * t;
+                emitParticles(px, py, 2, {
+                    type: 'spark',
+                    hue: hueShift + edgeIdx * 90,
+                    vx: (Math.random() - 0.5) * 3,
+                    vy: -Math.random() * 3,
+                    size: 2 + Math.random() * 2,
+                    life: 0.6,
+                    decay: 0.02,
+                    gravity: 0.05
+                });
+            }
         }
 
         // ============ Geometry Helpers ============
@@ -567,7 +1308,6 @@
         }
 
         // ============ Color Helpers ============
-        // RGB -> HSL
         function rgbToHsl(r, g, b) {
             r /= 255; g /= 255; b /= 255;
             const max = Math.max(r, g, b), min = Math.min(r, g, b);
@@ -586,7 +1326,6 @@
             return [h * 360, s, l];
         }
 
-        // HSL -> RGB
         function hslToRgb(h, s, l) {
             h /= 360;
             let r, g, b;
@@ -628,62 +1367,260 @@
             const out = outputData.data;
 
             if (currentEffect === 'mosaic') {
-                for (let by = 0; by < h; by += blockSize) {
-                    for (let bx = 0; bx < w; bx += blockSize) {
-                        const bcx = startX + bx + blockSize / 2;
-                        const bcy = startY + by + blockSize / 2;
-                        const dist = Math.sqrt(Math.pow(bcx - cx, 2) + Math.pow(bcy - cy, 2));
-                        if (dist > radius) continue;
-
-                        let r = 0, g = 0, b = 0, count = 0;
-                        const bxEnd = Math.min(bx + blockSize, w);
-                        const byEnd = Math.min(by + blockSize, h);
-                        for (let py = by; py < byEnd; py++) {
-                            for (let px = bx; px < bxEnd; px++) {
-                                const idx = (py * w + px) * 4;
-                                r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
-                                count++;
-                            }
-                        }
-                        r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
-
-                        for (let py = by; py < byEnd; py++) {
-                            for (let px = bx; px < bxEnd; px++) {
-                                const realX = startX + px;
-                                const realY = startY + py;
-                                const dist2 = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
-                                if (dist2 <= radius) {
-                                    const idx = (py * w + px) * 4;
-                                    out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
-                                }
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Colorful hue-shift effect
-                for (let py = 0; py < h; py++) {
-                    for (let px = 0; px < w; px++) {
-                        const realX = startX + px;
-                        const realY = startY + py;
-                        const dist = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
-                        if (dist > radius) continue;
-
-                        const idx = (py * w + px) * 4;
-                        const [hue, sat, lit] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
-                        // Shift hue based on position + time animation
-                        const posOffset = ((realX + realY) / 3) % 360;
-                        const newHue = (hue + hueShift + posOffset) % 360;
-                        const newSat = Math.min(1, sat + 0.4); // boost saturation
-                        const [nr, ng, nb] = hslToRgb(newHue, newSat, lit);
-                        out[idx] = nr; out[idx + 1] = ng; out[idx + 2] = nb; out[idx + 3] = 255;
-                    }
-                }
+                applyMosaicCircle(data, out, w, h, startX, startY, cx, cy, radius, blockSize);
+            } else if (currentEffect === 'thermal') {
+                applyThermalCircle(data, out, w, h, startX, startY, cx, cy, radius);
+            } else if (currentEffect === 'glitch') {
+                applyGlitchCircle(data, out, w, h, startX, startY, cx, cy, radius);
+            } else if (currentEffect === 'blackhole') {
+                applyBlackholeCircle(data, out, w, h, startX, startY, cx, cy, radius);
+            } else if (currentEffect === 'pixelstorm') {
+                applyPixelStormCircle(data, out, w, h, startX, startY, cx, cy, radius, blockSize);
             }
 
             ctx.putImageData(outputData, startX, startY);
         }
 
+        // --- Mosaic ---
+        function applyMosaicCircle(data, out, w, h, startX, startY, cx, cy, radius, blockSize) {
+            for (let by = 0; by < h; by += blockSize) {
+                for (let bx = 0; bx < w; bx += blockSize) {
+                    const bcx = startX + bx + blockSize / 2;
+                    const bcy = startY + by + blockSize / 2;
+                    const dist = Math.sqrt(Math.pow(bcx - cx, 2) + Math.pow(bcy - cy, 2));
+                    if (dist > radius) continue;
+
+                    let r = 0, g = 0, b = 0, count = 0;
+                    const bxEnd = Math.min(bx + blockSize, w);
+                    const byEnd = Math.min(by + blockSize, h);
+                    for (let py = by; py < byEnd; py++) {
+                        for (let px = bx; px < bxEnd; px++) {
+                            const idx = (py * w + px) * 4;
+                            r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
+                            count++;
+                        }
+                    }
+                    r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+
+                    for (let py = by; py < byEnd; py++) {
+                        for (let px = bx; px < bxEnd; px++) {
+                            const realX = startX + px;
+                            const realY = startY + py;
+                            const dist2 = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                            if (dist2 <= radius) {
+                                const idx = (py * w + px) * 4;
+                                out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Thermal Imaging Color Map ---
+        // Maps intensity (0-1) to thermal colors: black → deep blue → purple → red → orange → yellow → white
+        function thermalColorMap(intensity) {
+            // Clamp
+            const t = Math.max(0, Math.min(1, intensity));
+            let r, g, b;
+
+            if (t < 0.15) {
+                // Black to deep blue
+                const s = t / 0.15;
+                r = 0;
+                g = 0;
+                b = Math.round(s * 80);
+            } else if (t < 0.3) {
+                // Deep blue to purple/magenta
+                const s = (t - 0.15) / 0.15;
+                r = Math.round(s * 150);
+                g = 0;
+                b = Math.round(80 + s * 80);
+            } else if (t < 0.45) {
+                // Purple to red
+                const s = (t - 0.3) / 0.15;
+                r = Math.round(150 + s * 105);
+                g = 0;
+                b = Math.round(160 * (1 - s));
+            } else if (t < 0.6) {
+                // Red to orange
+                const s = (t - 0.45) / 0.15;
+                r = 255;
+                g = Math.round(s * 140);
+                b = 0;
+            } else if (t < 0.8) {
+                // Orange to yellow
+                const s = (t - 0.6) / 0.2;
+                r = 255;
+                g = Math.round(140 + s * 115);
+                b = Math.round(s * 30);
+            } else {
+                // Yellow to white
+                const s = (t - 0.8) / 0.2;
+                r = 255;
+                g = 255;
+                b = Math.round(30 + s * 225);
+            }
+
+            return [r, g, b];
+        }
+
+        // --- Thermal Imaging Effect (Circle) ---
+        function applyThermalCircle(data, out, w, h, startX, startY, cx, cy, radius) {
+            for (let py = 0; py < h; py++) {
+                for (let px = 0; px < w; px++) {
+                    const realX = startX + px;
+                    const realY = startY + py;
+                    const dist = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                    if (dist > radius) continue;
+
+                    const idx = (py * w + px) * 4;
+                    // Calculate perceived luminance (weighted average)
+                    const luminance = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) / 255;
+                    const [nr, ng, nb] = thermalColorMap(luminance);
+                    out[idx] = nr; out[idx + 1] = ng; out[idx + 2] = nb; out[idx + 3] = 255;
+                }
+            }
+        }
+
+        // --- Glitch ---
+        function applyGlitchCircle(data, out, w, h, startX, startY, cx, cy, radius) {
+            const sliceHeight = 3 + Math.floor(Math.random() * 8);
+            const time = frameCount;
+
+            for (let py = 0; py < h; py++) {
+                // Random horizontal offset per slice
+                const sliceIdx = Math.floor(py / sliceHeight);
+                const offset = Math.sin(sliceIdx * 0.5 + time * 0.3) * 15 * (Math.random() > 0.7 ? 3 : 1);
+                const channelShift = Math.floor(Math.sin(time * 0.1 + sliceIdx) * 8);
+
+                for (let px = 0; px < w; px++) {
+                    const realX = startX + px;
+                    const realY = startY + py;
+                    const dist = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                    if (dist > radius) continue;
+
+                    const idx = (py * w + px) * 4;
+                    const srcPx = Math.max(0, Math.min(w - 1, px + Math.floor(offset)));
+                    const srcIdx = (py * w + srcPx) * 4;
+
+                    // RGB channel separation
+                    const rPx = Math.max(0, Math.min(w - 1, px + channelShift));
+                    const bPx = Math.max(0, Math.min(w - 1, px - channelShift));
+                    const rIdx = (py * w + rPx) * 4;
+                    const bIdx = (py * w + bPx) * 4;
+
+                    out[idx] = data[rIdx];
+                    out[idx + 1] = data[srcIdx + 1];
+                    out[idx + 2] = data[bIdx + 2];
+                    out[idx + 3] = 255;
+
+                    // Random white noise
+                    if (Math.random() < 0.02) {
+                        const v = Math.random() * 255;
+                        out[idx] = v; out[idx + 1] = v; out[idx + 2] = v;
+                    }
+                }
+            }
+        }
+
+        // --- Blackhole Distortion ---
+        function applyBlackholeCircle(data, out, w, h, startX, startY, cx, cy, radius) {
+            const strength = 0.7 + Math.sin(frameCount * 0.05) * 0.3;
+
+            for (let py = 0; py < h; py++) {
+                for (let px = 0; px < w; px++) {
+                    const realX = startX + px;
+                    const realY = startY + py;
+                    const dx = realX - cx;
+                    const dy = realY - cy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > radius) continue;
+
+                    const idx = (py * w + px) * 4;
+
+                    // Swirl + pull toward center
+                    const normalDist = dist / radius;
+                    const angle = Math.atan2(dy, dx);
+                    const twist = strength * (1 - normalDist) * 3 + frameCount * 0.02;
+                    const pull = normalDist * normalDist; // less pull at center
+
+                    const newAngle = angle + twist;
+                    const newDist = dist * (0.3 + pull * 0.7);
+
+                    const srcX = Math.round(cx + Math.cos(newAngle) * newDist) - startX;
+                    const srcY = Math.round(cy + Math.sin(newAngle) * newDist) - startY;
+
+                    if (srcX >= 0 && srcX < w && srcY >= 0 && srcY < h) {
+                        const srcIdx = (srcY * w + srcX) * 4;
+                        // Darken toward center
+                        const darken = 0.3 + normalDist * 0.7;
+                        out[idx] = data[srcIdx] * darken;
+                        out[idx + 1] = data[srcIdx + 1] * darken;
+                        out[idx + 2] = data[srcIdx + 2] * darken + (1 - normalDist) * 80;
+                        out[idx + 3] = 255;
+                    } else {
+                        out[idx] = 0; out[idx + 1] = 0; out[idx + 2] = 30; out[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        // --- Pixel Storm ---
+        function applyPixelStormCircle(data, out, w, h, startX, startY, cx, cy, radius, blockSize) {
+            const time = frameCount * 0.05;
+            const stormSize = blockSize + Math.floor(Math.sin(time) * 3);
+
+            for (let by = 0; by < h; by += stormSize) {
+                for (let bx = 0; bx < w; bx += stormSize) {
+                    const bcx = startX + bx + stormSize / 2;
+                    const bcy = startY + by + stormSize / 2;
+                    const dist = Math.sqrt(Math.pow(bcx - cx, 2) + Math.pow(bcy - cy, 2));
+                    if (dist > radius) continue;
+
+                    // Scatter offset based on distance from center
+                    const normalDist = dist / radius;
+                    const scatter = normalDist * 20 * Math.sin(time + bx * 0.1 + by * 0.1);
+                    const srcBx = Math.max(0, Math.min(w - stormSize, bx + Math.floor(scatter)));
+                    const srcBy = Math.max(0, Math.min(h - stormSize, by + Math.floor(scatter * 0.7)));
+
+                    let r = 0, g = 0, b = 0, count = 0;
+                    const bxEnd = Math.min(srcBx + stormSize, w);
+                    const byEnd = Math.min(srcBy + stormSize, h);
+                    for (let py = srcBy; py < byEnd; py++) {
+                        for (let px = srcBx; px < bxEnd; px++) {
+                            const idx = (py * w + px) * 4;
+                            r += data[idx]; g += data[idx + 1]; b += data[idx + 2];
+                            count++;
+                        }
+                    }
+                    if (count === 0) continue;
+                    r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+
+                    // Color boost
+                    const boost = 1.2 + normalDist * 0.5;
+                    r = Math.min(255, r * boost);
+                    g = Math.min(255, g * boost);
+                    b = Math.min(255, b * boost);
+
+                    const drawBxEnd = Math.min(bx + stormSize, w);
+                    const drawByEnd = Math.min(by + stormSize, h);
+                    for (let py = by; py < drawByEnd; py++) {
+                        for (let px = bx; px < drawBxEnd; px++) {
+                            const realX = startX + px;
+                            const realY = startY + py;
+                            const d2 = Math.sqrt(Math.pow(realX - cx, 2) + Math.pow(realY - cy, 2));
+                            if (d2 <= radius) {
+                                const idx = (py * w + px) * 4;
+                                out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ============ Quadrilateral Effects ============
         function applyQuadrilateralEffect(points) {
             const minX = Math.max(0, Math.floor(Math.min(...points.map(p => p.x))));
             const maxX = Math.min(canvas.width, Math.ceil(Math.max(...points.map(p => p.x))));
@@ -700,6 +1637,9 @@
             const out = outputData.data;
 
             const blockSize = mosaicBlockSize;
+            const qcx = (minX + maxX) / 2;
+            const qcy = (minY + maxY) / 2;
+            const qRadius = Math.max(w, h) / 2;
 
             if (currentEffect === 'mosaic') {
                 for (let by = 0; by < h; by += blockSize) {
@@ -718,7 +1658,6 @@
                                 count++;
                             }
                         }
-                        if (count === 0) continue;
                         r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
 
                         for (let py = by; py < byEnd; py++) {
@@ -733,26 +1672,128 @@
                         }
                     }
                 }
-            } else {
-                // Colorful hue-shift effect
+            } else if (currentEffect === 'thermal') {
                 for (let py = 0; py < h; py++) {
                     for (let px = 0; px < w; px++) {
                         const realX = minX + px;
                         const realY = minY + py;
                         if (!isPointInPolygon(realX, realY, points)) continue;
-
                         const idx = (py * w + px) * 4;
-                        const [hue, sat, lit] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
-                        const posOffset = ((realX + realY) / 3) % 360;
-                        const newHue = (hue + hueShift + posOffset) % 360;
-                        const newSat = Math.min(1, sat + 0.4);
-                        const [nr, ng, nb] = hslToRgb(newHue, newSat, lit);
+                        const luminance = (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) / 255;
+                        const [nr, ng, nb] = thermalColorMap(luminance);
                         out[idx] = nr; out[idx + 1] = ng; out[idx + 2] = nb; out[idx + 3] = 255;
                     }
                 }
+            } else if (currentEffect === 'glitch') {
+                applyGlitchQuad(data, out, w, h, minX, minY, points);
+            } else if (currentEffect === 'blackhole') {
+                applyBlackholeQuad(data, out, w, h, minX, minY, points, qcx, qcy, qRadius);
+            } else if (currentEffect === 'pixelstorm') {
+                applyPixelStormQuad(data, out, w, h, minX, minY, points, qcx, qcy, qRadius, blockSize);
             }
 
             ctx.putImageData(outputData, minX, minY);
+        }
+
+        function applyGlitchQuad(data, out, w, h, minX, minY, points) {
+            const sliceHeight = 3 + Math.floor(Math.random() * 8);
+            const time = frameCount;
+            for (let py = 0; py < h; py++) {
+                const sliceIdx = Math.floor(py / sliceHeight);
+                const offset = Math.sin(sliceIdx * 0.5 + time * 0.3) * 15 * (Math.random() > 0.7 ? 3 : 1);
+                const channelShift = Math.floor(Math.sin(time * 0.1 + sliceIdx) * 8);
+                for (let px = 0; px < w; px++) {
+                    const realX = minX + px;
+                    const realY = minY + py;
+                    if (!isPointInPolygon(realX, realY, points)) continue;
+                    const idx = (py * w + px) * 4;
+                    const srcPx = Math.max(0, Math.min(w - 1, px + Math.floor(offset)));
+                    const rPx = Math.max(0, Math.min(w - 1, px + channelShift));
+                    const bPx = Math.max(0, Math.min(w - 1, px - channelShift));
+                    out[idx] = data[(py * w + rPx) * 4];
+                    out[idx + 1] = data[(py * w + srcPx) * 4 + 1];
+                    out[idx + 2] = data[(py * w + bPx) * 4 + 2];
+                    out[idx + 3] = 255;
+                    if (Math.random() < 0.02) {
+                        const v = Math.random() * 255;
+                        out[idx] = v; out[idx + 1] = v; out[idx + 2] = v;
+                    }
+                }
+            }
+        }
+
+        function applyBlackholeQuad(data, out, w, h, minX, minY, points, qcx, qcy, qRadius) {
+            const strength = 0.7 + Math.sin(frameCount * 0.05) * 0.3;
+            for (let py = 0; py < h; py++) {
+                for (let px = 0; px < w; px++) {
+                    const realX = minX + px;
+                    const realY = minY + py;
+                    if (!isPointInPolygon(realX, realY, points)) continue;
+                    const idx = (py * w + px) * 4;
+                    const dx = realX - qcx;
+                    const dy = realY - qcy;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const normalDist = Math.min(1, dist / qRadius);
+                    const angle = Math.atan2(dy, dx);
+                    const twist = strength * (1 - normalDist) * 3 + frameCount * 0.02;
+                    const pull = normalDist * normalDist;
+                    const newAngle = angle + twist;
+                    const newDist = dist * (0.3 + pull * 0.7);
+                    const srcX = Math.round(qcx + Math.cos(newAngle) * newDist) - minX;
+                    const srcY = Math.round(qcy + Math.sin(newAngle) * newDist) - minY;
+                    if (srcX >= 0 && srcX < w && srcY >= 0 && srcY < h) {
+                        const srcIdx = (srcY * w + srcX) * 4;
+                        const darken = 0.3 + normalDist * 0.7;
+                        out[idx] = data[srcIdx] * darken;
+                        out[idx + 1] = data[srcIdx + 1] * darken;
+                        out[idx + 2] = data[srcIdx + 2] * darken + (1 - normalDist) * 80;
+                        out[idx + 3] = 255;
+                    } else {
+                        out[idx] = 0; out[idx + 1] = 0; out[idx + 2] = 30; out[idx + 3] = 255;
+                    }
+                }
+            }
+        }
+
+        function applyPixelStormQuad(data, out, w, h, minX, minY, points, qcx, qcy, qRadius, blockSize) {
+            const time = frameCount * 0.05;
+            const stormSize = blockSize + Math.floor(Math.sin(time) * 3);
+            for (let by = 0; by < h; by += stormSize) {
+                for (let bx = 0; bx < w; bx += stormSize) {
+                    const bcx = minX + bx + stormSize / 2;
+                    const bcy = minY + by + stormSize / 2;
+                    if (!isPointInPolygon(bcx, bcy, points)) continue;
+                    const dist = Math.sqrt(Math.pow(bcx - qcx, 2) + Math.pow(bcy - qcy, 2));
+                    const normalDist = Math.min(1, dist / qRadius);
+                    const scatter = normalDist * 20 * Math.sin(time + bx * 0.1 + by * 0.1);
+                    const srcBx = Math.max(0, Math.min(w - stormSize, bx + Math.floor(scatter)));
+                    const srcBy = Math.max(0, Math.min(h - stormSize, by + Math.floor(scatter * 0.7)));
+                    let r = 0, g = 0, b = 0, count = 0;
+                    const bxEnd = Math.min(srcBx + stormSize, w);
+                    const byEnd = Math.min(srcBy + stormSize, h);
+                    for (let py = srcBy; py < byEnd; py++) {
+                        for (let px = srcBx; px < bxEnd; px++) {
+                            const idx2 = (py * w + px) * 4;
+                            r += data[idx2]; g += data[idx2 + 1]; b += data[idx2 + 2];
+                            count++;
+                        }
+                    }
+                    if (count === 0) continue;
+                    r = Math.min(255, Math.floor(r / count) * 1.3);
+                    g = Math.min(255, Math.floor(g / count) * 1.3);
+                    b = Math.min(255, Math.floor(b / count) * 1.3);
+                    const drawBxEnd = Math.min(bx + stormSize, w);
+                    const drawByEnd = Math.min(by + stormSize, h);
+                    for (let py = by; py < drawByEnd; py++) {
+                        for (let px = bx; px < drawBxEnd; px++) {
+                            if (isPointInPolygon(minX + px, minY + py, points)) {
+                                const idx = (py * w + px) * 4;
+                                out[idx] = r; out[idx + 1] = g; out[idx + 2] = b; out[idx + 3] = 255;
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // ============ Drawing Helpers ============
@@ -764,8 +1805,6 @@
             ctx.strokeStyle = '#fff';
             ctx.lineWidth = 2;
             ctx.stroke();
-
-            // Glow effect
             ctx.beginPath();
             ctx.arc(x, y, 14, 0, Math.PI * 2);
             ctx.strokeStyle = color + '44';
